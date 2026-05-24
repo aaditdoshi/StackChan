@@ -48,7 +48,7 @@ private:
     {
         int action = Random::getInstance().getInt(0, 100);
 
-        if (action < 70) {
+        if (action < 60) {
             // 【动作 1：眼神游离】双眼协同移动一个小范围
             int offsetX = Random::getInstance().getInt(-20, 20);
             int offsetY = Random::getInstance().getInt(-15, 15);
@@ -57,6 +57,15 @@ private:
 
             // 嘴巴也配合动一下
             avatar.mouth().setPosition({0, Random::getInstance().getInt(0, 10)});
+
+            // Eyebrows follow gaze with a subtle shift
+            int browOffsetY = Random::getInstance().getInt(-8, 8);
+            avatar.leftEyebrow().setPosition({offsetX / 2, browOffsetY});
+            avatar.rightEyebrow().setPosition({offsetX / 2, browOffsetY});
+        } else if (action < 70) {
+            // 【动作 2：扬眉】Quick eyebrow raise then settle
+            avatar.leftEyebrow().setPosition({0, -20});
+            avatar.rightEyebrow().setPosition({0, -20});
         } else if (action < 80) {
             // 【动作 3：嘴巴歪一下】旋转角度
             // Rotation: 0~3600
@@ -83,6 +92,10 @@ private:
         // 旋转和权重回归
         avatar.mouth().setRotation(0);
         avatar.mouth().setWeight(0);
+
+        // Eyebrows back to neutral position
+        avatar.leftEyebrow().setPosition({0, 0});
+        avatar.rightEyebrow().setPosition({0, 0});
     }
 
     uint32_t _interval_min;

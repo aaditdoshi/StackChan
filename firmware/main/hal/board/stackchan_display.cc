@@ -490,10 +490,13 @@ void StackChanAvatarDisplay::SetStatus(const char* status)
 
     if (strcmp(status, Lang::Strings::LISTENING) == 0) {
         if (speaking_modifier_id_ >= 0) {
-            // Start speaking
             stackchan.removeModifier(speaking_modifier_id_);
             avatar.mouth().setWeight(0);
             speaking_modifier_id_ = -1;
+        }
+
+        if (thinking_modifier_id_ < 0) {
+            thinking_modifier_id_ = stackchan.addModifier(std::make_unique<ThinkingModifier>());
         }
 
         GetHAL().setRgbColor(0, 0, 50, 0);
@@ -503,10 +506,14 @@ void StackChanAvatarDisplay::SetStatus(const char* status)
         _is_xiaozhi_ready = true;
 
         if (speaking_modifier_id_ >= 0) {
-            // Stop speaking
             stackchan.removeModifier(speaking_modifier_id_);
             avatar.mouth().setWeight(0);
             speaking_modifier_id_ = -1;
+        }
+
+        if (thinking_modifier_id_ >= 0) {
+            stackchan.removeModifier(thinking_modifier_id_);
+            thinking_modifier_id_ = -1;
         }
 
         is_idle = true;
@@ -515,6 +522,11 @@ void StackChanAvatarDisplay::SetStatus(const char* status)
         GetHAL().refreshRgb();
 
     } else if (strcmp(status, Lang::Strings::SPEAKING) == 0) {
+        if (thinking_modifier_id_ >= 0) {
+            stackchan.removeModifier(thinking_modifier_id_);
+            thinking_modifier_id_ = -1;
+        }
+
         if (speaking_modifier_id_ < 0) {
             speaking_modifier_id_ = stackchan.addModifier(std::make_unique<SpeakingModifier>(0, 180, false));
         }
@@ -563,4 +575,39 @@ void StackChanAvatarDisplay::SetStatus(const char* status)
 
 void StackChanAvatarDisplay::ShowNotification(const char* notification, int duration_ms)
 {
+}
+
+void StackChanAvatarDisplay::SetPowerSaveMode(bool on)
+{
+    auto& stackchan = GetStackChan();
+    if (!stackchan.hasAvatar()) {
+        return;
+    }
+
+    DisplayLockGuard lock(this);
+    auto& avatar = stackchan.avatar();
+
+    if (on) {
+        ESP_LOGW(TAG, "Entering sleep: show Sleepy face");
+        avatar.setEmotion(Emotion::Sleepy);
+        avatar.setSpeech("Zzz…");
+        is_sleeping_ = true;
+
+        if (idle_motion_modifier_id_ >= 0) {
+            stackchan.removeModifier(idle_motion_modifier_id_);
+            idle_motion_modifier_id_ = -1;
+        }
+        if (idle_expression_modifier_id_ >= 0) {
+            stackchan.removeModifier(idle_expression_modifier_id_);
+            idle_expression_modifier_id_ = -1;
+        }
+
+        auto& motion = stackchan.motion();
+        motion.pitchServo().moveWithSpeed(0, 80);
+    } else {
+        ESP_LOGW(TAG, "Exiting sleep: restore Neutral face");
+        avatar.setEmotion(Emotion::Neutral);
+        avatar.setSpeech("");
+        is_sleeping_ = false;
+    }
 }

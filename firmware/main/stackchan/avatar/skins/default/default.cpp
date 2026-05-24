@@ -18,9 +18,11 @@ void DefaultAvatar::init(lv_obj_t* parent, const lv_font_t* font)
     _pannel->setBgColor(secondaryColor);
     _pannel->removeFlag(LV_OBJ_FLAG_SCROLLABLE);
 
-    _key_elements.leftEye  = std::make_unique<DefaultEyes>(_pannel->get(), primaryColor, secondaryColor, true);
-    _key_elements.rightEye = std::make_unique<DefaultEyes>(_pannel->get(), primaryColor, secondaryColor, false);
-    _key_elements.mouth    = std::make_unique<DefaultMouth>(_pannel->get(), primaryColor, secondaryColor);
+    _key_elements.leftEye      = std::make_unique<DefaultEyes>(_pannel->get(), primaryColor, secondaryColor, true);
+    _key_elements.rightEye     = std::make_unique<DefaultEyes>(_pannel->get(), primaryColor, secondaryColor, false);
+    _key_elements.mouth        = std::make_unique<DefaultMouth>(_pannel->get(), primaryColor, secondaryColor);
+    _key_elements.leftEyebrow  = std::make_unique<DefaultEyebrows>(_pannel->get(), primaryColor, secondaryColor, true);
+    _key_elements.rightEyebrow = std::make_unique<DefaultEyebrows>(_pannel->get(), primaryColor, secondaryColor, false);
     _key_elements.speechBubble =
         std::make_unique<DefaultSpeechBubble>(_pannel->get(), primaryColor, secondaryColor, font);
 }

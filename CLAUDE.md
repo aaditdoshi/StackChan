@@ -1,0 +1,146 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Repository Structure
+
+Three independent components, each with its own toolchain:
+
+- `firmware/` — C++ ESP-IDF firmware for the M5Stack CoreS3 (ESP32-S3)
+- `server/` — Go backend (GoFrame framework, SQLite)
+- `app/` — Native iOS app (Swift/SwiftUI, Xcode)
+
+> **Note:** `app/README.md` describes a Flutter app and `server/README.md` describes MySQL — both are outdated. The actual code is Swift/iOS and SQLite respectively.
+
+---
+
+## Firmware
+
+**Toolchain:** ESP-IDF v5.5.4
+
+```bash
+cd firmware
+
+# 1. Fetch external dependencies (mooncake, smooth_ui_toolkit, xiaozhi-esp32, etc.)
+python3 fetch_repos.py
+
+# 2. Configure (select board: BOARD_TYPE_M5STACK_STACK_CHAN, language, wake word, etc.)
+idf.py menuconfig
+
+# 3. Build
+idf.py build
+
+# 4. Flash
+idf.py flash
+
+# 5. Monitor serial output
+idf.py monitor
+```
+
+### Firmware Architecture
+
+The firmware has two distinct operational modes that are mutually exclusive:
+
+**Mode 1 — Mooncake App Mode** (default on boot)
+The `main.cpp` main loop runs the Mooncake app framework. Five apps are installed:
+- `AppLauncher` — home screen
+- `AppAiAgent` — triggers switch to XiaoZhi mode
+- `AppAvatar` — WebSocket/BLE remote control (video call, expressions, servo)
+- `AppSetup` — Wi-Fi provisioning UI
+- `AppEspnowControl` — local device-to-device mesh via ESP-NOW
+
+**Mode 2 — XiaoZhi AI Mode** (entered when user launches AppAiAgent)
+The main loop breaks, all Mooncake apps are destroyed, and `GetHAL().startXiaozhi()` runs. This never returns. XiaoZhi is a voice AI assistant (from the `xiaozhi-esp32` dependency) that uses MCP tools to control the hardware.
+
+### Key Layers
+
+```
+main.cpp
+└── Mooncake apps (firmware/main/apps/)
+    └── StackChan (firmware/main/stackchan/)
+        ├── avatar/       — face rendering (LVGL), emotions, decorators
+        ├── motion/       — servo control with spring physics
+        ├── modifiers/    — autonomous behaviors (blink, breath, idle, dance, etc.)
+        ├── addons/       — neon_light RGB control
+        └── json/         — JSON→avatar/motion update helpers
+└── HAL (firmware/main/hal/)
+    ├── hal.cpp/.h        — unified peripheral interface
+    ├── hal_mcp.cpp       — MCP tool registration for XiaoZhi AI
+    ├── hal_ble.cpp       — BLE/Blufi server
+    ├── hal_ws_avatar.cpp — WebSocket client to Go server
+    ├── hal_servo.cpp     — SCServo driver
+    └── drivers/          — PCF8563 (RTC), BMI270 (IMU), PY32IOExpander
+```
+
+**Avatar emotions** (defined in `stackchan/avatar/avatar/elements/emotion.h`): `Neutral`, `Happy`, `Angry`, `Sad`, `Doubt`, `Sleepy`
+
+**Decorators** (visual overlays): `HeartDecorator`, `AngryDecorator`, `SweatDecorator`, `ShyDecorator`, `DizzyDecorator`
+
+**Modifiers** (autonomous animation loops, stackable): `BlinkModifier`, `BreathModifier`, `SpeakingModifier`, `IdleExpressionModifier`, `IdleMotionModifier`, `DanceModifier`, `TimedEmotionModifier`, `HeadPetModifier`, `ImuModifier`
+
+**MCP tools** (registered in `hal_mcp.cpp`, available only in XiaoZhi mode): `self.robot.get_head_angles`, `self.robot.set_head_angles`, `self.robot.set_led_color`, `self.robot.create_reminder`, `self.robot.get_reminders`, `self.robot.stop_reminder`
+
+Any code touching avatar/motion state from outside the LVGL render thread must hold `LvglLockGuard`.
+
+### WebSocket Binary Protocol
+
+All messages between device↔server and app↔server use:
+```
+[type: 1 byte][length: 4 bytes big-endian][payload: variable]
+```
+App→device payloads are prefixed with the 12-byte device MAC string. Message types (defined in `app/StackChan/MessageModel.swift` and `server/internal/web_socket/web_socket.go`): `0x01` Opus audio, `0x02` JPEG, `0x03` ControlAvatar, `0x04` ControlMotion, `0x07` TextMessage, `0x09–0x0C` call signaling, `0x14` Dance, etc.
+
+---
+
+## Server
+
+**Toolchain:** Go 1.24+, GoFrame v2
+
+```bash
+cd server
+
+# Run in development
+go run main.go
+
+# Build
+go build -o stackchan-server main.go
+```
+
+The server uses **SQLite** (`stackChan.sqlite` in the server directory). Config is in `hack/config.yaml`.
+
+### Server Architecture
+
+The server is purely a message hub and REST API — it holds no AI logic. Two connection pools are maintained by the WebSocket hub (`internal/web_socket/web_socket.go`):
+- `StackChanClients` — one entry per physical device (keyed by MAC)
+- `AppClients` — one or more iOS app connections per device
+
+Messages from an app are forwarded to the device matching the MAC prefix in the payload. Messages from the device are broadcast to all subscribed app clients. Camera subscriptions and active calls are tracked per `StackChanClient`. Keep-alive: ping every 5s, disconnect after 15s silence.
+
+REST API prefix: `/stackChan/api/v1/`
+WebSocket endpoint: `ws://.../stackChan/ws?mac={mac}&deviceType={StackChan|App}&deviceId={id}`
+
+DAO/entity layer is auto-generated by GoFrame CLI from the SQLite schema.
+
+---
+
+## iOS App
+
+**Toolchain:** Xcode, Swift/SwiftUI, iOS 16+
+
+Open `app/StackChan.xcodeproj` in Xcode and build/run on device or simulator.
+
+The server URL defaults to `192.168.51.43:12800` — change it in `app/StackChan/Urls.swift` for your environment.
+
+### App Architecture
+
+`AppState` (singleton) owns all shared state: WebSocket connection, device MAC/name, BLE scanning, navigation. All network I/O flows through two utilities:
+- `WebSocketUtil` — binary protocol over WebSocket, auto-reconnects (3s backoff)
+- `Networking` — HTTP REST (GET/POST/PUT/DELETE via URLSession)
+- `BlufiUtil` — BLE scanning for initial device Wi-Fi provisioning
+
+Key views:
+- `AvatarMotionControl` — sliders for raw eye/mouth/servo values
+- `MimicryEmotion` — ARKit face tracking that mirrors user expressions to the robot in real time
+- `Dance` — keyframe dance sequencer
+- `StackChan` (main hub) — SwitchFace presets, navigation to sub-views
+- `CameraPage` — live JPEG stream from robot with directional servo controls

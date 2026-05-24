@@ -20,6 +20,8 @@ struct KeyElements_t {
     std::unique_ptr<Feature> leftEye;
     std::unique_ptr<Feature> rightEye;
     std::unique_ptr<Feature> mouth;
+    std::unique_ptr<Feature> leftEyebrow;
+    std::unique_ptr<Feature> rightEyebrow;
     std::unique_ptr<SpeechBubble> speechBubble;
 
     void forEach(std::function<void(Element*)> callback)
@@ -32,6 +34,12 @@ struct KeyElements_t {
         }
         if (mouth) {
             callback(mouth.get());
+        }
+        if (leftEyebrow) {
+            callback(leftEyebrow.get());
+        }
+        if (rightEyebrow) {
+            callback(rightEyebrow.get());
         }
         if (speechBubble) {
             callback(speechBubble.get());

@@ -76,6 +76,16 @@ public:
         return *getKeyElements().mouth;
     }
 
+    Feature& leftEyebrow()
+    {
+        return *getKeyElements().leftEyebrow;
+    }
+
+    Feature& rightEyebrow()
+    {
+        return *getKeyElements().rightEyebrow;
+    }
+
     void setSpeech(std::string_view text)
     {
         if (getKeyElements().speechBubble) {

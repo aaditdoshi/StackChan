@@ -156,6 +156,70 @@ void Hal::getMicWaveformFrame(std::vector<int16_t>& data)
     }
 }
 
+// ── Voice pipeline helpers ────────────────────────────────────────────────────
+
+void Hal::startVoiceCapture()
+{
+    auto audio_codec = Board::GetInstance().GetAudioCodec();
+    if (audio_codec)
+        audio_codec->EnableInput(true);
+}
+
+bool Hal::readVoiceChunk(std::vector<int16_t>& data, size_t frames)
+{
+    auto audio_codec = Board::GetInstance().GetAudioCodec();
+    if (!audio_codec)
+        return false;
+
+    const size_t channels = std::max(audio_codec->input_channels(), 1);
+    data.resize(frames * channels);
+    if (!audio_codec->InputData(data))
+        return false;
+
+    // Downmix to mono if the codec gives us more than one channel
+    if (channels > 1) {
+        for (size_t i = 0; i < frames; ++i)
+            data[i] = data[i * channels];
+        data.resize(frames);
+    }
+    return true;
+}
+
+void Hal::stopVoiceCapture()
+{
+    auto audio_codec = Board::GetInstance().GetAudioCodec();
+    if (audio_codec && audio_codec->input_enabled())
+        audio_codec->EnableInput(false);
+}
+
+void Hal::startVoicePlayback()
+{
+    auto audio_codec = Board::GetInstance().GetAudioCodec();
+    if (audio_codec)
+        audio_codec->EnableOutput(true);
+}
+
+void Hal::writeVoiceChunk(std::vector<int16_t>& data)
+{
+    auto audio_codec = Board::GetInstance().GetAudioCodec();
+    if (audio_codec)
+        audio_codec->OutputData(data);
+}
+
+void Hal::stopVoicePlayback()
+{
+    auto audio_codec = Board::GetInstance().GetAudioCodec();
+    if (audio_codec && audio_codec->output_enabled())
+        audio_codec->EnableOutput(false);
+}
+
+uint32_t Hal::getAudioSampleRate()
+{
+    return AUDIO_INPUT_SAMPLE_RATE;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 void Hal::clearupMicTest()
 {
     auto& board      = Board::GetInstance();

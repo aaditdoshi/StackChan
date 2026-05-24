@@ -75,6 +75,28 @@ private:
  * @brief
  *
  */
+class DefaultEyebrows : public Feature {
+public:
+    DefaultEyebrows(lv_obj_t* parent, lv_color_t primaryColor, lv_color_t secondaryColor, bool isLeftEyebrow);
+    ~DefaultEyebrows();
+
+    void setPosition(const uitk::Vector2i& position) override;
+    void setWeight(int weight) override;
+    void setRotation(int rotation) override;
+    void setEmotion(const Emotion& emotion) override;
+    void setVisible(bool visible) override;
+
+private:
+    bool _is_left_eyebrow = false;
+    int  _emotion_y_offset = 0;
+
+    std::unique_ptr<uitk::lvgl_cpp::Container> _brow;
+};
+
+/**
+ * @brief
+ *
+ */
 class DefaultSpeechBubble : public SpeechBubble {
 public:
     DefaultSpeechBubble(lv_obj_t* parent, lv_color_t primaryColor, lv_color_t secondaryColor, const lv_font_t* font);

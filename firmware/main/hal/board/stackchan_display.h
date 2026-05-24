@@ -15,6 +15,7 @@ private:
     esp_lcd_panel_io_handle_t panel_io_ = nullptr;
     esp_lcd_panel_handle_t panel_       = nullptr;
     int speaking_modifier_id_           = -1;
+    int thinking_modifier_id_           = -1;
     int idle_motion_modifier_id_        = -1;
     int idle_expression_modifier_id_    = -1;
     int blink_modifier_id_              = -1;
@@ -48,6 +49,7 @@ public:
     virtual void SetTheme(Theme* theme) override;
     virtual void SetStatus(const char* status) override;
     virtual void ShowNotification(const char* notification, int duration_ms = 3000) override;
+    virtual void SetPowerSaveMode(bool on) override;
 
     void LvglLock();
     void LvglUnlock();

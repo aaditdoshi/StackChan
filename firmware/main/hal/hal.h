@@ -300,6 +300,15 @@ public:
     void getMicWaveformFrame(std::vector<int16_t>& data);
     void clearupMicTest();
 
+    // Voice pipeline helpers — thin wrappers around AudioCodec
+    void     startVoiceCapture();
+    bool     readVoiceChunk(std::vector<int16_t>& data, size_t frames = 512);
+    void     stopVoiceCapture();
+    void     startVoicePlayback();
+    void     writeVoiceChunk(std::vector<int16_t>& data);
+    void     stopVoicePlayback();
+    uint32_t getAudioSampleRate();
+
 private:
     bool _xiaozhi_start_requested = false;
 

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\CodeProjects\\\\StackChan\\\\StackChan\\\\firmware\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(xargs grep -l \"websocket\\\\|ws\\\\|connection\\\\|client\")"
+    ]
+  }
+}

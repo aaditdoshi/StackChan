@@ -234,7 +234,7 @@ private:
 
 class M5StackCoreS3Board : public WifiBoard {
 private:
-    static constexpr int kPowerSaveSleepDelaySeconds = 300;
+    static constexpr int kPowerSaveSleepDelaySeconds = 180;
     static constexpr int kPowerStatePollIntervalMs   = 1000;
 
     i2c_master_bus_handle_t i2c_bus_;

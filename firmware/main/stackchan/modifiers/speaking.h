@@ -52,6 +52,8 @@ public:
         // 检查销毁逻辑
         if (_has_lifetime && now >= _destroy_at) {
             stackchan.avatar().mouth().setWeight(0);  // 闭嘴
+            stackchan.avatar().leftEyebrow().setPosition({0, 0});
+            stackchan.avatar().rightEyebrow().setPosition({0, 0});
             requestDestroy();
             return;
         }
@@ -67,6 +69,7 @@ public:
             // 随机下一个动作的时间 (1.5s ~ 2.5s)
             _next_motion_tick = now + Random::getInstance().getInt(1500, 2500);
             perform_subtle_speaking_motion(stackchan);
+            perform_eyebrow_emphasis(stackchan.avatar());
         }
     }
 
@@ -80,6 +83,24 @@ private:
                                     : random.getInt(_close_min_weight, _close_max_weight);
 
         avatar.mouth().setWeight(weight);
+    }
+
+    void perform_eyebrow_emphasis(avatar::Avatar& avatar)
+    {
+        int action = Random::getInstance().getInt(0, 10);
+        if (action < 4) {
+            // Raise both eyebrows slightly for emphasis
+            avatar.leftEyebrow().setPosition({0, -15});
+            avatar.rightEyebrow().setPosition({0, -15});
+        } else if (action < 7) {
+            // One eyebrow up (expressive speech)
+            avatar.leftEyebrow().setPosition({0, -18});
+            avatar.rightEyebrow().setPosition({0, 0});
+        } else {
+            // Return to neutral
+            avatar.leftEyebrow().setPosition({0, 0});
+            avatar.rightEyebrow().setPosition({0, 0});
+        }
     }
 
     void perform_subtle_speaking_motion(Modifiable& stackchan)
